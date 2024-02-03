@@ -21,6 +21,7 @@ class Rom(BaseModel):
 
     igdb_id: int = Column(Integer())
     sgdb_id: int = Column(Integer())
+    moby_id: int = Column(Integer())
 
     file_name: str = Column(String(length=450), nullable=False)
     file_name_no_tags: str = Column(String(length=450), nullable=False)

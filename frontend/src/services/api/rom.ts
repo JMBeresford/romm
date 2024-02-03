@@ -87,7 +87,7 @@ async function searchRom({
   searchBy,
 }: {
   romId: number;
-  source: string;
+  source: "igdb" | "mobygames";
   searchTerm: string;
   searchBy: string;
 }): Promise<{ data: SearchRomSchema[] }> {

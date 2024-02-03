@@ -10,12 +10,14 @@ from handler.fs_handler.fs_assets_handler import FSAssetsHandler
 from handler.fs_handler.fs_platforms_handler import FSPlatformsHandler
 from handler.fs_handler.fs_resources_handler import FSResourceHandler
 from handler.fs_handler.fs_roms_handler import FSRomsHandler
-from backend.handler.metadata_handler.igdb_handler import IGDBHandler
+from handler.metadata_handler.igdb_handler import IGDBHandler
+from handler.metadata_handler.moby_handler import MobyGamesHandler
 from handler.gh_handler import GHHandler
 from handler.sgdb_handler import SGDBHandler
 from handler.socket_handler import SocketHandler
 
 igdb_handler = IGDBHandler()
+moby_handler = MobyGamesHandler()
 sgdb_handler = SGDBHandler()
 github_handler = GHHandler()
 auth_handler = AuthHandler()

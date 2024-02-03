@@ -21,7 +21,149 @@ PS2_MOBY_ID: Final = 7
 SWITCH_MOBY_ID: Final = 203
 ARCADE_MOBY_IDS: Final = [143]
 
-IGDB_SLUG_TO_MOBI_ID: Final = {
+
+class MobyGamesRom(MetadataRom):
+    moby_id: int
+
+
+class MobyGamesPlatform(MetadataPlatform):
+    moby_id: int
+
+
+class MobyGamesHandler(MetadataHandler):
+    def __init__(self) -> None:
+        self.platform_url = "https://api.mobygames.com/v1/platforms"
+        self.games_url = "https://api.mobygames.com/v1/games"
+
+    def _request(self, url: str, timeout: int = 120) -> dict:
+        try:
+            res = requests.get(url, timeout=timeout)
+            res.raise_for_status()
+            return res.json()
+        except Timeout:
+            # Retry once the request if it times out
+            pass
+
+        try:
+            res = requests.get(url, timeout=timeout)
+            res.raise_for_status()
+        except (HTTPError, Timeout) as err:
+            # Log the error and return an empty dict if the request fails again
+            log.error(err)
+            return {}
+
+        return res.json()
+
+    def _search_rom(self, search_term: str, platform_moby_id: int) -> dict:
+        url = yarl.URL(self.games_url).with_query(
+            platform=[platform_moby_id], title=search_term
+        )
+        roms = self._request(str(url))
+
+        exact_matches = [
+            rom for rom in roms["games"] if rom["name"].lower() == search_term.lower()
+        ]
+
+        return pydash.get(exact_matches or roms, "[0]", {})
+
+    def get_platform(self, slug: str) -> MobyGamesPlatform:
+        platform = IGDB_SLUG_TO_MOBI_ID.get(slug, None)
+
+        if not platform:
+            return MobyGamesPlatform(
+                igdb_id=None, slug=slug, name=slug.replace("-", " ").title()
+            )
+
+        return MobyGamesPlatform(
+            moby_id=platform["platform_id"],
+            name=platform["platform_name"],
+            slug=slug,
+        )
+
+    async def get_rom(self, file_name: str, platform_moby_id: int) -> MobyGamesRom:
+        from handler import fs_rom_handler
+
+        search_term = fs_rom_handler.get_file_name_with_no_tags(file_name)
+
+        # Support for PS2 OPL filename format
+        match = re.match(PS2_OPL_REGEX, file_name)
+        if platform_moby_id == PS2_MOBY_ID and match:
+            search_term = await self._ps2_opl_format(match, search_term)
+
+        # Support for switch titleID filename format
+        match = re.search(SWITCH_TITLEDB_REGEX, file_name)
+        if platform_moby_id == SWITCH_MOBY_ID and match:
+            search_term = await self._switch_titledb_format(match, search_term)
+
+        # Support for switch productID filename format
+        match = re.search(SWITCH_PRODUCT_ID_REGEX, file_name)
+        if platform_moby_id == SWITCH_MOBY_ID and match:
+            search_term = await self._switch_productid_format(match, search_term)
+
+        # Support for MAME arcade filename format
+        if platform_moby_id in ARCADE_MOBY_IDS:
+            search_term = await self._mame_format(search_term)
+
+        search_term = self.normalize_search_term(search_term)
+        res = self._search_rom(uc(search_term), platform_moby_id)
+
+        return MobyGamesRom(
+            moby_id=res.get("game_id", None),
+            slug=res.get("slug", ""),
+            name=res.get("name", search_term),
+            summary=res.get("description", ""),
+            url_cover=res.get("sample_cover.image", DEFAULT_URL_COVER_L),
+            url_screenshots=[
+                s.get("image", None) for s in res.get("sample_screenshots", [])
+            ],
+        )
+
+    def get_rom_by_id(self, moby_id: int) -> MobyGamesRom:
+        url = yarl.URL(self.games_url).with_query(id=moby_id)
+        roms = self._request(str(url))
+        rom = pydash.get(roms, "games.[0]", {})
+
+        return MobyGamesRom(
+            moby_id=moby_id,
+            slug=rom.get("slug", ""),
+            name=rom.get("name", ""),
+            summary=rom.get("description", ""),
+            url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
+            url_screenshots=[
+                s.get("image", None) for s in rom.get("sample_screenshots", [])
+            ],
+        )
+
+    def get_matched_roms_by_id(self, moby_id: int) -> list[MobyGamesRom]:
+        return self.get_rom_by_id(moby_id)
+
+    def get_matched_roms_by_name(
+        self, search_term: str, platform_moby_id: int
+    ) -> list[MobyGamesRom]:
+        if not platform_moby_id:
+            return []
+
+        url = yarl.URL(self.games_url).with_query(
+            platform=[platform_moby_id], title=search_term
+        )
+        matched_roms = self._request(str(url))
+
+        return [
+            MobyGamesRom(
+                moby_id=rom["game_id"],
+                slug=rom["slug"],
+                name=rom["name"],
+                summary=rom.get("summary", ""),
+                url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
+                url_screenshots=[
+                    s.get("image", None) for s in rom.get("sample_screenshots", [])
+                ],
+            )
+            for rom in matched_roms
+        ]
+
+
+SLUG_TO_MOBI_ID: Final = {
     "1292-advanced-programmable-video-system": {
         "id": 253,
         "name": "1292 Advanced Programmable Video System",
@@ -30,6 +172,7 @@ IGDB_SLUG_TO_MOBI_ID: Final = {
     "abc-80": {"id": 318, "name": "ABC 80"},
     "apf": {"id": 213, "name": "APF MP1000/Imagination Machine"},
     "acorn-32-bit": {"id": 117, "name": "Acorn 32-bit"},
+    "acorn-archimedes": {"id": 117, "name": "Acorn Archimedes"}, # IGDB
     "adventure-vision": {"id": 210, "name": "Adventure Vision"},
     "airconsole": {"id": 305, "name": "AirConsole"},
     "alice-3290": {"id": 194, "name": "Alice 32/90"},
@@ -39,37 +182,49 @@ IGDB_SLUG_TO_MOBI_ID: Final = {
     "amiga": {"id": 19, "name": "Amiga"},
     "amiga-cd32": {"id": 56, "name": "Amiga CD32"},
     "cpc": {"id": 60, "name": "Amstrad CPC"},
+    "acpc": {"id": 60, "name": "Amstrad CPC"}, # IGDB
     "amstrad-pcw": {"id": 136, "name": "Amstrad PCW"},
     "android": {"id": 91, "name": "Android"},
     "antstream": {"id": 286, "name": "Antstream"},
     "apple-i": {"id": 245, "name": "Apple I"},
     "apple2": {"id": 31, "name": "Apple II"},
-    "apple2gs": {"id": 51, "name": "Apple IIgs"},
+    "appleii": {"id": 31, "name": "Apple II"}, # IGDB
+    "apple2gs": {"id": 51, "name": "Apple IIGD"},
+    "apple-iigs": {"id": 51, "name": "Apple IIGD"}, # IGDB
     "arcade": {"id": 143, "name": "Arcade"},
     "arcadia-2001": {"id": 162, "name": "Arcadia 2001"},
     "arduboy": {"id": 215, "name": "Arduboy"},
     "astral-2000": {"id": 241, "name": "Astral 2000"},
     "atari-2600": {"id": 28, "name": "Atari 2600"},
+    "atari2600": {"id": 28, "name": "Atari 2600"}, # IGDB
     "atari-5200": {"id": 33, "name": "Atari 5200"},
+    "atari5200": {"id": 33, "name": "Atari 5200"}, # IGDB
     "atari-7800": {"id": 34, "name": "Atari 7800"},
+    "atari7800": {"id": 34, "name": "Atari 7800"}, # IGDB
     "atari-8-bit": {"id": 39, "name": "Atari 8-bit"},
+    "atari8bit": {"id": 39, "name": "Atari 8-bit"}, # IGDB
     "atari-st": {"id": 24, "name": "Atari ST"},
     "atari-vcs": {"id": 319, "name": "Atari VCS"},
     "atom": {"id": 129, "name": "Atom"},
     "bbc-micro": {"id": 92, "name": "BBC Micro"},
+    "bbcmicro": {"id": 92, "name": "BBC Micro"}, # IGDB
     "brew": {"id": 63, "name": "BREW"},
     "bally-astrocade": {"id": 160, "name": "Bally Astrocade"},
+    "astrocade": {"id": 160, "name": "Bally Astrocade"}, # IGDB
     "beos": {"id": 165, "name": "BeOS"},
     "blackberry": {"id": 90, "name": "BlackBerry"},
     "blacknut": {"id": 290, "name": "Blacknut"},
-    "blu-ray-disc-player": {"id": 168, "name": "Blu-ray Disc Player"},
+    "blu-ray-disc-player": {"id": 168, "name": "Blu-ray Player"},
+    "blu-ray-player": {"id": 169, "name": "Blu-ray Player"}, # IGDB
     "browser": {"id": 84, "name": "Browser"},
     "bubble": {"id": 231, "name": "Bubble"},
     "cd-i": {"id": 73, "name": "CD-i"},
+    "philips-cd-i": {"id": 73, "name": "CD-i"}, # IGDB
     "cdtv": {"id": 83, "name": "CDTV"},
+    "commodore-cdtv": {"id": 83, "name": "CDTV"}, # IGDB
     "fred-cosmac": {"id": 216, "name": "COSMAC"},
-    "cpm": {"id": 261, "name": "CP/M"},
     "camputers-lynx": {"id": 154, "name": "Camputers Lynx"},
+    "cpm": {"id": 261, "name": "CP/M"},
     "casio-loopy": {"id": 124, "name": "Casio Loopy"},
     "casio-pv-1000": {"id": 125, "name": "Casio PV-1000"},
     "casio-programmable-calculator": {
@@ -78,14 +233,18 @@ IGDB_SLUG_TO_MOBI_ID: Final = {
     },
     "champion-2711": {"id": 298, "name": "Champion 2711"},
     "channel-f": {"id": 76, "name": "Channel F"},
+    "fairchild-channel-f": {"id": 76, "name": "Channel F"}, # IGDB
     "clickstart": {"id": 188, "name": "ClickStart"},
     "colecoadam": {"id": 156, "name": "Coleco Adam"},
     "colecovision": {"id": 29, "name": "ColecoVision"},
     "colour-genie": {"id": 197, "name": "Colour Genie"},
     "c128": {"id": 61, "name": "Commodore 128"},
     "commodore-16-plus4": {"id": 115, "name": "Commodore 16, Plus/4"},
+    "c-plus-4": {"id": 115, "name": "Commodore Plus/4"}, # IGDB
+    "c16": {"id": 115, "name": "Commodore 16"}, # IGDB
     "c64": {"id": 27, "name": "Commodore 64"},
     "pet": {"id": 77, "name": "Commodore PET/CBM"},
+    "cpet": {"id": 77, "name": "Commodore PET/CBM"}, # IGDB
     "compal-80": {"id": 277, "name": "Compal 80"},
     "compucolor-i": {"id": 243, "name": "Compucolor I"},
     "compucolor-ii": {"id": 198, "name": "Compucolor II"},
@@ -352,143 +511,231 @@ IGDB_SLUG_TO_MOBI_ID: Final = {
     "webos": {"id": 100, "name": "webOS"},
 }
 
+# abc-80
+# apf
+# alice-3290
+# altair-680
+# altair-8800
+# amazon-alexa
+# antstream
+# apple-i
+# arcadia-2001
+# astral-2000
+# atari-vcs
+# atom
+# brew
+# beos
+# blacknut
+# bubble
+# fred-cosmac
+# cpm
+# camputers-lynx
+# casio-pv-1000
+# casio-programmable-calculator
+# champion-2711
+# clickstart
+# colecoadam
+# colour-genie
+# compal-80
+# compucolor-i
+# compucolor-ii
+# compucorp-programmable-calculator
+# creativision
+# cybervision
 
-class MobyGamesRom(MetadataRom):
-    moby_id: int
-
-
-class MobyGamesPlatform(MetadataPlatform):
-    moby_id: int
-
-
-class MobyGamesHandler(MetadataHandler):
-    def __init__(self) -> None:
-        self.platform_url = "https://api.mobygames.com/v1/platforms"
-        self.games_url = "https://api.mobygames.com/v1/games"
-
-    def _request(self, url: str, timeout: int = 120) -> dict:
-        try:
-            res = requests.get(url, timeout=timeout)
-            res.raise_for_status()
-            return res.json()
-        except Timeout:
-            # Retry once the request if it times out
-            pass
-
-        try:
-            res = requests.get(url, timeout=timeout)
-            res.raise_for_status()
-        except (HTTPError, Timeout) as err:
-            # Log the error and return an empty dict if the request fails again
-            log.error(err)
-            return {}
-
-        return res.json()
-
-    def _search_rom(self, search_term: str, platform_moby_id: int) -> dict:
-        url = yarl.URL(self.games_url).with_query(
-            platform=[platform_moby_id], title=search_term
-        )
-        roms = self._request(str(url))
-
-        exact_matches = [
-            rom for rom in roms["games"] if rom["name"].lower() == search_term.lower()
-        ]
-
-        return pydash.get(exact_matches or roms, "[0]", {})
-
-    def get_platform(self, slug: str) -> MobyGamesPlatform:
-        platform = IGDB_SLUG_TO_MOBI_ID.get(slug, None)
-
-        if not platform:
-            return MobyGamesPlatform(
-                igdb_id=None, slug=slug, name=slug.replace("-", " ").title()
-            )
-
-        return MobyGamesPlatform(
-            moby_id=platform["platform_id"],
-            name=platform["platform_name"],
-            slug=slug,
-        )
-
-    async def get_rom(self, file_name: str, platform_moby_id: int) -> MobyGamesRom:
-        from handler import fs_rom_handler
-
-        search_term = fs_rom_handler.get_file_name_with_no_tags(file_name)
-
-        # Support for PS2 OPL filename format
-        match = re.match(PS2_OPL_REGEX, file_name)
-        if platform_moby_id == PS2_MOBY_ID and match:
-            search_term = await self._ps2_opl_format(match, search_term)
-
-        # Support for switch titleID filename format
-        match = re.search(SWITCH_TITLEDB_REGEX, file_name)
-        if platform_moby_id == SWITCH_MOBY_ID and match:
-            search_term = await self._switch_titledb_format(match, search_term)
-
-        # Support for switch productID filename format
-        match = re.search(SWITCH_PRODUCT_ID_REGEX, file_name)
-        if platform_moby_id == SWITCH_MOBY_ID and match:
-            search_term = await self._switch_productid_format(match, search_term)
-
-        # Support for MAME arcade filename format
-        if platform_moby_id in ARCADE_MOBY_IDS:
-            search_term = await self._mame_format(search_term)
-
-        search_term = self.normalize_search_term(search_term)
-        res = self._search_rom(uc(search_term), platform_moby_id)
-
-        return MobyGamesRom(
-            moby_id=res.get("game_id", None),
-            slug=res.get("slug", ""),
-            name=res.get("name", search_term),
-            summary=res.get("description", ""),
-            url_cover=res.get("sample_cover.image", DEFAULT_URL_COVER_L),
-            url_screenshots=[
-                s.get("image", None) for s in res.get("sample_screenshots", [])
-            ],
-        )
-
-    def get_rom_by_id(self, moby_id: int) -> MobyGamesRom:
-        url = yarl.URL(self.games_url).with_query(id=moby_id)
-        roms = self._request(str(url))
-        rom = pydash.get(roms, "games.[0]", {})
-
-        return MobyGamesRom(
-            moby_id=moby_id,
-            slug=rom.get("slug", ""),
-            name=rom.get("name", ""),
-            summary=rom.get("description", ""),
-            url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
-            url_screenshots=[
-                s.get("image", None) for s in rom.get("sample_screenshots", [])
-            ],
-        )
-
-    def get_matched_roms_by_id(self, moby_id: int) -> list[MobyGamesRom]:
-        return self.get_rom_by_id(moby_id)
-
-    def get_matched_roms_by_name(
-        self, search_term: str, platform_moby_id: int
-    ) -> list[MobyGamesRom]:
-        if not platform_moby_id:
-            return []
-
-        url = yarl.URL(self.games_url).with_query(
-            platform=[platform_moby_id], title=search_term
-        )
-        matched_roms = self._request(str(url))
-
-        return [
-            MobyGamesRom(
-                moby_id=rom["game_id"],
-                slug=rom["slug"],
-                name=rom["name"],
-                summary=rom.get("summary", ""),
-                url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
-                url_screenshots=[
-                    s.get("image", None) for s in rom.get("sample_screenshots", [])
-                ],
-            )
-            for rom in matched_roms
-        ]
+# danger-os
+# dedicated-console
+# dedicated-handheld
+# didj
+# doja
+# dragon-3264
+# dreamcast
+# ecd-micromind
+# electron
+# enterprise
+# epoch-game-pocket-computer
+# exen
+# exelvision
+# fmtowns
+# mobile-custom
+# fire-os
+# freebox
+# g-cluster
+# gimini
+# gnex
+# gp2x
+# gp2x-wiz
+# gp32
+# gvm
+# galaksija
+# gameboy
+# gameboy-advance
+# gameboy-color
+# game-gear
+# game-wave
+# game-com
+# gamecube
+# gamestick
+# genesis
+# gizmondo
+# gloud
+# glulx
+# hd-dvd-player
+# hp-9800
+# hp-programmable-calculator
+# heathzenith
+# heathkit-h11
+# hitachi-s1
+# hugo
+# ibm-5100
+# ideal-computer
+# intel-8008
+# intel-8080
+# intel-8086
+# interact-model-one
+# interton-video-2000
+# j2me
+# jolt
+# jupiter-ace
+# kim-1
+# kaios
+# kindle
+# laser200
+# laseractive
+# leapfrog-explorer
+# luna
+# mos-technology-6502
+# mre
+# macintosh
+# maemo
+# mainframe
+# matsushitapanasonic-jr
+# mattel-aquarius
+# meego
+# memotech-mtx
+# meritum
+# microbee
+# microtan-65
+# microvision
+# mophun
+# motorola-6800
+# motorola-68k
+# ngage2
+# nascom
+# neo-geo
+# neo-geo-x
+# newbrain
+# newton
+# nintendo-ds
+# northstar
+# noval-760
+# os2
+# odyssey
+# odyssey-2
+# ohio-scientific
+# onlive
+# orao
+# oric
+# pc-booter
+# pc-6001
+# pc-8000
+# pc88
+# pc98
+# pico
+# ps-vita
+# palmos
+# pandora
+# pebble
+# philips-vg-5000
+# photocd
+# pippin
+# playstation-4
+# playstation-5
+# playstation-now
+# plex-arcade
+# pokitto
+# poly-88
+# rca-studio-ii
+# research-machines-380z
+# roku
+# sam-coupe
+# scmp
+# sd-200270290
+# sega-32x
+# sega-cd
+# sega-saturn
+# sk-vm
+# smc-777
+# sri-5001000
+# swtpc-6800
+# sharp-mz-80b20002500
+# sharp-mz-80k7008001500
+# sharp-x1
+# sharp-zaurus
+# signetics-2650
+# socrates
+# sord-m5
+# spectravideo
+# super-acan
+# super-vision-8000
+# supervision
+# sure-shot-hd
+# symbian
+# tads
+# ti-programmable-calculator
+# ti-994a
+# tim
+# trs-80-coco
+# trs-80-mc-10
+# trs-80-model-100
+# taito-x-55
+# tektronix-4050
+# tele-spiel
+# telstar-arcade
+# terminal
+# thomson-mo
+# thomson-to
+# tiki-100
+# timex-sinclair-2068
+# tizen
+# tomahawk-f1
+# tomy-tutor
+# triton
+# turbografx-cd
+# turbo-grafx
+# vflash
+# vis
+# versatile
+# videobrain
+# videopac-g7400
+# virtual-boy
+# wipi
+# wang2200
+# wii-u
+# windows
+# win3x
+# windows-apps
+# windowsmobile
+# windows-phone
+# xavixport
+# xboxcloudgaming
+# xbox-one
+# xbox-series
+# xerox-alto
+# z-machine
+# zx-spectrum-next
+# zx80
+# zx81
+# z80
+# zilog-z8000
+# zodiac
+# zune
+# bada
+# digiblast
+# ipad
+# iphone
+# ipod-classic
+# iircade
+# tvos
+# watchos
+# webos

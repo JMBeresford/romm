@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from enum import Enum
 
 import emoji
 from config.config_manager import config_manager as cm
@@ -9,13 +10,24 @@ from handler import (
     fs_resource_handler,
     fs_rom_handler,
     igdb_handler,
+    moby_handler,
 )
 from logger.logger import log
 from models.assets import Save, Screenshot, State
 from models.platform import Platform
 from models.rom import Rom
 
+
+class MetadataSource(Enum):
+    IGDB = "igdb"
+    MOBYGAMES = "mobygames"
+
+
 SWAPPED_PLATFORM_BINDINGS = dict((v, k) for k, v in cm.config.PLATFORMS_BINDING.items())
+SOURCE_TO_HANDLER = {
+    MetadataSource.IGDB: igdb_handler,
+    MetadataSource.MOBYGAMES: moby_handler,
+}
 
 
 def _get_main_platform_igdb_id(platform: Platform):
@@ -35,7 +47,11 @@ def _get_main_platform_igdb_id(platform: Platform):
     return main_platform_igdb_id
 
 
-def scan_platform(fs_slug: str, fs_platforms) -> Platform:
+def scan_platform(
+    fs_slug: str,
+    fs_platforms: list[str],
+    source: MetadataSource = MetadataSource.MOBYGAMES,
+) -> Platform:
     """Get platform details
 
     Args:
@@ -67,7 +83,7 @@ def scan_platform(fs_slug: str, fs_platforms) -> Platform:
     except (KeyError, TypeError, AttributeError):
         platform_attrs["slug"] = fs_slug
 
-    platform = igdb_handler.get_platform(platform_attrs["slug"])
+    platform = SOURCE_TO_HANDLER[source].get_platform(platform_attrs["slug"])
 
     if platform["igdb_id"]:
         log.info(emoji.emojize(f"  Identified as {platform['name']} :video_game:"))
@@ -84,12 +100,11 @@ def scan_platform(fs_slug: str, fs_platforms) -> Platform:
 async def scan_rom(
     platform: Platform,
     rom_attrs: dict,
-    r_igbd_id_search: str = "",
-    overwrite: bool = False,
+    source: MetadataSource = MetadataSource.MOBYGAMES,
 ) -> Rom:
     roms_path = fs_rom_handler.get_fs_structure(platform.fs_slug)
 
-    log.info(f"\t · {r_igbd_id_search or rom_attrs['file_name']}")
+    log.info(f"\t · {rom_attrs['file_name']}")
 
     if rom_attrs.get("multi", False):
         for file in rom_attrs["files"]:
@@ -126,34 +141,40 @@ async def scan_rom(
         }
     )
 
-    main_platform_igdb_id = _get_main_platform_igdb_id(platform)
-
-    # Search in IGDB
-    igdb_handler_rom = (
-        igdb_handler.get_rom_by_id(int(r_igbd_id_search))
-        if r_igbd_id_search
-        else await igdb_handler.get_rom(rom_attrs["file_name"], main_platform_igdb_id)
-    )
-
-    rom_attrs.update(igdb_handler_rom)
-
-    # Return early if not found in IGDB
-    if not igdb_handler_rom["igdb_id"]:
-        log.warning(
-            emoji.emojize(
-                f"\t   {r_igbd_id_search or rom_attrs['file_name']} not found in IGDB :cross_mark:"
-            )
+    if source == MetadataSource.IGDB:
+        main_platform_igdb_id = _get_main_platform_igdb_id(platform)
+        handler_rom = await igdb_handler.get_rom(
+            rom_attrs["file_name"], main_platform_igdb_id
         )
-        return Rom(**rom_attrs)
+        rom_attrs.update(handler_rom)
 
-    log.info(
-        emoji.emojize(f"\t   Identified as {igdb_handler_rom['name']} :alien_monster:")
-    )
+        # Return early if not found in IGDB
+        if not handler_rom["igdb_id"]:
+            log.warning(
+                emoji.emojize(
+                    f"\t   {rom_attrs['file_name']} not found in IGDB :cross_mark:"
+                )
+            )
+            return Rom(**rom_attrs)
+    elif source == MetadataSource.MOBYGAMES:
+        handler_rom = moby_handler.get_rom(rom_attrs["file_name"], platform.moby_id)
+        rom_attrs.update(handler_rom)
+
+        # Return early if not found in MobyGames
+        if not handler_rom["moby_id"]:
+            log.warning(
+                emoji.emojize(
+                    f"\t   {rom_attrs['file_name']} not found in MobyGames :cross_mark:"
+                )
+            )
+            return Rom(**rom_attrs)
+
+    log.info(emoji.emojize(f"\t   Identified as {handler_rom['name']} :alien_monster:"))
 
     # Update properties from IGDB
     rom_attrs.update(
         fs_resource_handler.get_rom_cover(
-            overwrite=overwrite,
+            overwrite=False,
             platform_fs_slug=platform.slug,
             rom_name=rom_attrs["name"],
             url_cover=rom_attrs["url_cover"],

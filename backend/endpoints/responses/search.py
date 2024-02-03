@@ -1,4 +1,4 @@
-from backend.handler.metadata_handler.igdb_handler import IGDBRom
+from handler.metadata_handler.igdb_handler import IGDBRom
 
 
 class SearchRomSchema(IGDBRom):

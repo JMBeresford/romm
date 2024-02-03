@@ -2,11 +2,11 @@ import emoji
 from decorators.auth import protected_route
 from endpoints.responses.search import SearchRomSchema
 from fastapi import APIRouter, Request
-from handler import db_rom_handler, igdb_handler
+from handler import db_rom_handler
+from handler.scan_handler import SOURCE_TO_HANDLER
 from logger.logger import log
 
 router = APIRouter()
-
 
 @protected_route(router.get, "/search/roms", ["roms.read"])
 async def search_rom(
@@ -37,9 +37,11 @@ async def search_rom(
     log.info(f"Searching by {search_by.lower()}: {search_term}")
     log.info(emoji.emojize(f":video_game: {rom.platform_slug}: {rom.file_name}"))
     if search_by.lower() == "id":
-        matched_roms = igdb_handler.get_matched_roms_by_id(int(search_term))
+        matched_roms = SOURCE_TO_HANDLER[source].get_matched_roms_by_id(
+            int(search_term)
+        )
     elif search_by.lower() == "name":
-        matched_roms = igdb_handler.get_matched_roms_by_name(
+        matched_roms = SOURCE_TO_HANDLER[source].get_matched_roms_by_name(
             search_term, rom.platform.igdb_id
         )
 
