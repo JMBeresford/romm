@@ -67,7 +67,7 @@ class MobyGamesHandler(MetadataHandler):
         return pydash.get(exact_matches or roms, "[0]", {})
 
     def get_platform(self, slug: str) -> MobyGamesPlatform:
-        platform = IGDB_SLUG_TO_MOBI_ID.get(slug, None)
+        platform = SLUG_TO_MOBI_ID.get(slug, None)
 
         if not platform:
             return MobyGamesPlatform(
@@ -262,9 +262,12 @@ SLUG_TO_MOBI_ID: Final = {
     "didj": {"id": 184, "name": "Didj"},
     "doja": {"id": 72, "name": "DoJa"},
     "dragon-3264": {"id": 79, "name": "Dragon 32/64"},
+    "dragon-32-slash-64": {"id": 79, "name": "Dragon 32/64"}, # IGDB
     "dreamcast": {"id": 8, "name": "Dreamcast"},
+    "dc": {"id": 8, "name": "Dreamcast"}, # IGDB
     "ecd-micromind": {"id": 269, "name": "ECD Micromind"},
     "electron": {"id": 93, "name": "Electron"},
+    "acorn-electron": {"id": 93, "name": "Electron"}, # IGDB
     "enterprise": {"id": 161, "name": "Enterprise"},
     "epoch-cassette-vision": {"id": 137, "name": "Epoch Cassette Vision"},
     "epoch-game-pocket-computer": {"id": 139, "name": "Epoch Game Pocket Computer"},
@@ -274,9 +277,11 @@ SLUG_TO_MOBI_ID: Final = {
     "exelvision": {"id": 195, "name": "Exelvision"},
     "exidy-sorcerer": {"id": 176, "name": "Exidy Sorcerer"},
     "fmtowns": {"id": 102, "name": "FM Towns"},
+    "fm-towns": {"id": 102, "name": "FM Towns"}, # IGDB
     "fm-7": {"id": 126, "name": "FM-7"},
     "mobile-custom": {"id": 315, "name": "Feature phone"},
     "fire-os": {"id": 159, "name": "Fire OS"},
+    "amazon-fire-tv": {"id": 159, "name": "Fire TV"},
     "freebox": {"id": 268, "name": "Freebox"},
     "g-cluster": {"id": 302, "name": "G-cluster"},
     "gimini": {"id": 251, "name": "GIMINI"},
@@ -287,14 +292,21 @@ SLUG_TO_MOBI_ID: Final = {
     "gvm": {"id": 257, "name": "GVM"},
     "galaksija": {"id": 236, "name": "Galaksija"},
     "gameboy": {"id": 10, "name": "Game Boy"},
+    "gb": {"id": 10, "name": "Game Boy"}, # IGDB
     "gameboy-advance": {"id": 12, "name": "Game Boy Advance"},
+    "gba": {"id": 12, "name": "Game Boy Advance"}, # IGDB
     "gameboy-color": {"id": 11, "name": "Game Boy Color"},
+    "gbc": {"id": 11, "name": "Game Boy Color"}, # IGDB
     "game-gear": {"id": 25, "name": "Game Gear"},
+    "gamegear": {"id": 25, "name": "Game Gear"}, # IGDB
     "game-wave": {"id": 104, "name": "Game Wave"},
     "game-com": {"id": 50, "name": "Game.Com"},
+    "game-dot-com": {"id": 50, "name": "Game.Com"}, # IGDB
     "gamecube": {"id": 14, "name": "GameCube"},
+    "gc": {"id": 14, "name": "GameCube"}, # IGDB
     "gamestick": {"id": 155, "name": "GameStick"},
-    "genesis": {"id": 16, "name": "Genesis"},
+    "genesis": {"id": 16, "name": "Genesis/Mega Drive"},
+    "genesis-slash-megadrive": {"id": 16, "name": "Genesis/Mega Drive"},
     "gizmondo": {"id": 55, "name": "Gizmondo"},
     "gloud": {"id": 292, "name": "Gloud"},
     "glulx": {"id": 172, "name": "Glulx"},
@@ -324,6 +336,7 @@ SLUG_TO_MOBI_ID: Final = {
     "laser200": {"id": 264, "name": "Laser 200"},
     "laseractive": {"id": 163, "name": "LaserActive"},
     "leapfrog-explorer": {"id": 185, "name": "LeapFrog Explorer"},
+    "leapster-explorer-slash-leadpad-explorer": {"id": 186, "name": "Leapster Explorer/LeapPad Explorer"},
     "leaptv": {"id": 186, "name": "LeapTV"},
     "leapster": {"id": 183, "name": "Leapster"},
     "linux": {"id": 1, "name": "Linux"},
@@ -333,6 +346,7 @@ SLUG_TO_MOBI_ID: Final = {
     "mre": {"id": 229, "name": "MRE"},
     "msx": {"id": 57, "name": "MSX"},
     "macintosh": {"id": 74, "name": "Macintosh"},
+    "mac": {"id": 74, "name": "Macintosh"}, # IGDB
     "maemo": {"id": 157, "name": "Maemo"},
     "mainframe": {"id": 208, "name": "Mainframe"},
     "matsushitapanasonic-jr": {"id": 307, "name": "Matsushita/Panasonic JR"},
@@ -343,6 +357,7 @@ SLUG_TO_MOBI_ID: Final = {
     "microbee": {"id": 200, "name": "Microbee"},
     "microtan-65": {"id": 232, "name": "Microtan 65"},
     "microvision": {"id": 97, "name": "Microvision"},
+    "microvision--1": {"id": 97, "name": "Microvision"}, # IGDB
     "mophun": {"id": 71, "name": "Mophun"},
     "motorola-6800": {"id": 235, "name": "Motorola 6800"},
     "motorola-68k": {"id": 275, "name": "Motorola 68k"},
@@ -351,6 +366,8 @@ SLUG_TO_MOBI_ID: Final = {
     "nes": {"id": 22, "name": "NES"},
     "nascom": {"id": 175, "name": "Nascom"},
     "neo-geo": {"id": 36, "name": "Neo Geo"},
+    "neogeoaes": {"id": 36, "name": "Neo Geo"}, # IGDB
+    "neogeomvs": {"id": 36, "name": "Neo Geo"}, # IGDB
     "neo-geo-cd": {"id": 54, "name": "Neo Geo CD"},
     "neo-geo-pocket": {"id": 52, "name": "Neo Geo Pocket"},
     "neo-geo-pocket-color": {"id": 53, "name": "Neo Geo Pocket Color"},
@@ -361,6 +378,7 @@ SLUG_TO_MOBI_ID: Final = {
     "3ds": {"id": 101, "name": "Nintendo 3DS"},
     "n64": {"id": 9, "name": "Nintendo 64"},
     "nintendo-ds": {"id": 44, "name": "Nintendo DS"},
+    "nds": {"id": 44, "name": "Nintendo DS"}, # IGDB
     "nintendo-dsi": {"id": 87, "name": "Nintendo DSi"},
     "switch": {"id": 203, "name": "Nintendo Switch"},
     "northstar": {"id": 266, "name": "North Star"},
@@ -370,9 +388,12 @@ SLUG_TO_MOBI_ID: Final = {
     "os2": {"id": 146, "name": "OS/2"},
     "oculus-go": {"id": 218, "name": "Oculus Go"},
     "odyssey": {"id": 75, "name": "Odyssey"},
+    "odyssey--1": {"id": 75, "name": "Odyssey"}, # IGDB
     "odyssey-2": {"id": 78, "name": "Odyssey 2"},
+    "odyssey-2-slash-videopac-g7000": {"id": 78, "name": "Odyssey 2/Videopac G7000"},
     "ohio-scientific": {"id": 178, "name": "Ohio Scientific"},
     "onlive": {"id": 282, "name": "OnLive"},
+    "onlive-game-system": {"id": 282, "name": "OnLive Game System"}, # IGDB
     "orao": {"id": 270, "name": "Orao"},
     "oric": {"id": 111, "name": "Oric"},
     "ouya": {"id": 144, "name": "Ouya"},
@@ -380,12 +401,16 @@ SLUG_TO_MOBI_ID: Final = {
     "pc-6001": {"id": 149, "name": "PC-6001"},
     "pc-8000": {"id": 201, "name": "PC-8000"},
     "pc88": {"id": 94, "name": "PC-88"},
+    "pc-8800-series": {"id": 94, "name": "PC-8800 Series"}, # IGDB
     "pc98": {"id": 95, "name": "PC-98"},
+    "pc-9800-series": {"id": 95, "name": "PC-9800 Series"}, # IGDB
     "pc-fx": {"id": 59, "name": "PC-FX"},
     "pico": {"id": 316, "name": "PICO"},
     "ps-vita": {"id": 105, "name": "PS Vita"},
+    "psvita": {"id": 105, "name": "PS Vita"}, # IGDB
     "psp": {"id": 46, "name": "PSP"},
     "palmos": {"id": 65, "name": "Palm OS"},
+    "palm-os": {"id": 65, "name": "Palm OS"}, # IGDB
     "pandora": {"id": 308, "name": "Pandora"},
     "pebble": {"id": 304, "name": "Pebble"},
     "philips-vg-5000": {"id": 133, "name": "Philips VG 5000"},
@@ -395,7 +420,9 @@ SLUG_TO_MOBI_ID: Final = {
     "ps2": {"id": 7, "name": "PlayStation 2"},
     "ps3": {"id": 81, "name": "PlayStation 3"},
     "playstation-4": {"id": 141, "name": "PlayStation 4"},
+    "ps4--1": {"id": 141, "name": "PlayStation 4"}, # IGDB
     "playstation-5": {"id": 288, "name": "PlayStation 5"},
+    "ps5": {"id": 288, "name": "PlayStation 5"}, # IGDB
     "playstation-now": {"id": 294, "name": "PlayStation Now"},
     "playdate": {"id": 303, "name": "Playdate"},
     "playdia": {"id": 107, "name": "Playdia"},
@@ -411,10 +438,13 @@ SLUG_TO_MOBI_ID: Final = {
     "scmp": {"id": 255, "name": "SC/MP"},
     "sd-200270290": {"id": 267, "name": "SD-200/270/290"},
     "sega-32x": {"id": 21, "name": "SEGA 32X"},
+    "sega32": {"id": 21, "name": "SEGA 32X"}, # IGDB
     "sega-cd": {"id": 20, "name": "SEGA CD"},
+    "segacd": {"id": 20, "name": "SEGA CD"}, # IGDB
     "sega-master-system": {"id": 26, "name": "SEGA Master System"},
     "sega-pico": {"id": 103, "name": "SEGA Pico"},
     "sega-saturn": {"id": 23, "name": "SEGA Saturn"},
+    "saturn": {"id": 23, "name": "SEGA Saturn"}, # IGDB
     "sg-1000": {"id": 114, "name": "SG-1000"},
     "sk-vm": {"id": 259, "name": "SK-VM"},
     "smc-777": {"id": 273, "name": "SMC-777"},
@@ -422,8 +452,10 @@ SLUG_TO_MOBI_ID: Final = {
     "sri-5001000": {"id": 242, "name": "SRI-500/1000"},
     "swtpc-6800": {"id": 228, "name": "SWTPC 6800"},
     "sharp-mz-80b20002500": {"id": 182, "name": "Sharp MZ-80B/2000/2500"},
+    "sharp-mz-2200": {"id": 180, "name": "Sharp MZ-2200"},
     "sharp-mz-80k7008001500": {"id": 181, "name": "Sharp MZ-80K/700/800/1500"},
     "sharp-x1": {"id": 121, "name": "Sharp X1"},
+    "x1": {"id": 121, "name": "Sharp X1"}, # IGDB
     "sharp-x68000": {"id": 106, "name": "Sharp X68000"},
     "sharp-zaurus": {"id": 202, "name": "Sharp Zaurus"},
     "signetics-2650": {"id": 278, "name": "Signetics 2650"},
@@ -442,9 +474,11 @@ SLUG_TO_MOBI_ID: Final = {
     "tads": {"id": 171, "name": "TADS"},
     "ti-programmable-calculator": {"id": 239, "name": "TI Programmable Calculator"},
     "ti-994a": {"id": 47, "name": "TI-99/4A"},
+    "ti-99": {"id": 47, "name": "TI-99/4A"},
     "tim": {"id": 246, "name": "TIM"},
     "trs-80": {"id": 58, "name": "TRS-80"},
-    "trs-80-coco": {"id": 62, "name": "TRS-80 CoCo"},
+    "trs-80-coco": {"id": 62, "name": "TRS-80 Color Computer"},
+    "trs-80-color-computer": {"id": 62, "name": "TRS-80 Color Computer"}, # IGDB
     "trs-80-mc-10": {"id": 193, "name": "TRS-80 MC-10"},
     "trs-80-model-100": {"id": 312, "name": "TRS-80 Model 100"},
     "taito-x-55": {"id": 283, "name": "Taito X-55"},
@@ -454,6 +488,7 @@ SLUG_TO_MOBI_ID: Final = {
     "telstar-arcade": {"id": 233, "name": "Telstar Arcade"},
     "terminal": {"id": 209, "name": "Terminal"},
     "thomson-mo": {"id": 147, "name": "Thomson MO"},
+    "thomson-mo5": {"id": 147, "name": "Thomson MO5"},
     "thomson-to": {"id": 130, "name": "Thomson TO"},
     "tiki-100": {"id": 263, "name": "Tiki 100"},
     "timex-sinclair-2068": {"id": 173, "name": "Timex Sinclair 2068"},
@@ -462,7 +497,9 @@ SLUG_TO_MOBI_ID: Final = {
     "tomy-tutor": {"id": 151, "name": "Tomy Tutor"},
     "triton": {"id": 310, "name": "Triton"},
     "turbografx-cd": {"id": 45, "name": "TurboGrafx CD"},
+    "turbografx-16-slash-pc-engine-cd": {"id": 45, "name": "TurboGrafx CD"},
     "turbo-grafx": {"id": 40, "name": "TurboGrafx-16"},
+    "turbografx16--1": {"id": 40, "name": "TurboGrafx-16"}, # IGDB
     "vflash": {"id": 189, "name": "V.Flash"},
     "vsmile": {"id": 42, "name": "V.Smile"},
     "vic-20": {"id": 43, "name": "VIC-20"},
@@ -472,15 +509,20 @@ SLUG_TO_MOBI_ID: Final = {
     "videobrain": {"id": 214, "name": "VideoBrain"},
     "videopac-g7400": {"id": 128, "name": "Videopac+ G7400"},
     "virtual-boy": {"id": 38, "name": "Virtual Boy"},
+    "virtualboy": {"id": 38, "name": "Virtual Boy"},
     "wipi": {"id": 260, "name": "WIPI"},
     "wang2200": {"id": 217, "name": "Wang 2200"},
     "wii": {"id": 82, "name": "Wii"},
     "wii-u": {"id": 132, "name": "Wii U"},
+    "wiiu": {"id": 132, "name": "Wii U"},
     "windows": {"id": 3, "name": "Windows"},
+    "win": {"id": 3, "name": "Windows"}, # IGDB
     "win3x": {"id": 5, "name": "Windows 3.x"},
     "windows-apps": {"id": 140, "name": "Windows Apps"},
     "windowsmobile": {"id": 66, "name": "Windows Mobile"},
+    "windows-mobile": {"id": 66, "name": "Windows Mobile"}, # IGDB
     "windows-phone": {"id": 98, "name": "Windows Phone"},
+    "winphone": {"id": 98, "name": "Windows Phone"}, # IGDB
     "wonderswan": {"id": 48, "name": "WonderSwan"},
     "wonderswan-color": {"id": 49, "name": "WonderSwan Color"},
     "xavixport": {"id": 191, "name": "XaviXPORT"},
@@ -488,13 +530,16 @@ SLUG_TO_MOBI_ID: Final = {
     "xbox360": {"id": 69, "name": "Xbox 360"},
     "xboxcloudgaming": {"id": 293, "name": "Xbox Cloud Gaming"},
     "xbox-one": {"id": 142, "name": "Xbox One"},
+    "xboxone": {"id": 142, "name": "Xbox One"},
     "xbox-series": {"id": 289, "name": "Xbox Series"},
+    "series-x": {"id": 289, "name": "Xbox Series X"}, # IGDB
     "xerox-alto": {"id": 254, "name": "Xerox Alto"},
     "z-machine": {"id": 169, "name": "Z-machine"},
     "zx-spectrum": {"id": 41, "name": "ZX Spectrum"},
     "zx-spectrum-next": {"id": 280, "name": "ZX Spectrum Next"},
     "zx80": {"id": 118, "name": "ZX80"},
     "zx81": {"id": 119, "name": "ZX81"},
+    "sinclair-zx81": {"id": 119, "name": "ZX81"}, # IGDB
     "zeebo": {"id": 88, "name": "Zeebo"},
     "z80": {"id": 227, "name": "Zilog Z80"},
     "zilog-z8000": {"id": 276, "name": "Zilog Z8000"},
@@ -504,6 +549,7 @@ SLUG_TO_MOBI_ID: Final = {
     "digiblast": {"id": 187, "name": "digiBlast"},
     "ipad": {"id": 96, "name": "iPad"},
     "iphone": {"id": 86, "name": "iPhone"},
+    "ios": {"id": 86, "name": "iOS"},
     "ipod-classic": {"id": 80, "name": "iPod Classic"},
     "iircade": {"id": 314, "name": "iiRcade"},
     "tvos": {"id": 179, "name": "tvOS"},
@@ -542,23 +588,17 @@ SLUG_TO_MOBI_ID: Final = {
 # compucorp-programmable-calculator
 # creativision
 # cybervision
-
 # danger-os
 # dedicated-console
 # dedicated-handheld
 # didj
 # doja
-# dragon-3264
-# dreamcast
 # ecd-micromind
-# electron
 # enterprise
 # epoch-game-pocket-computer
 # exen
 # exelvision
-# fmtowns
 # mobile-custom
-# fire-os
 # freebox
 # g-cluster
 # gimini
@@ -568,20 +608,13 @@ SLUG_TO_MOBI_ID: Final = {
 # gp32
 # gvm
 # galaksija
-# gameboy
-# gameboy-advance
-# gameboy-color
-# game-gear
 # game-wave
-# game-com
-# gamecube
 # gamestick
 # genesis
 # gizmondo
 # gloud
 # glulx
 # hd-dvd-player
-# hp-9800
 # hp-programmable-calculator
 # heathzenith
 # heathkit-h11
@@ -602,11 +635,9 @@ SLUG_TO_MOBI_ID: Final = {
 # kindle
 # laser200
 # laseractive
-# leapfrog-explorer
 # luna
 # mos-technology-6502
 # mre
-# macintosh
 # maemo
 # mainframe
 # matsushitapanasonic-jr
@@ -616,41 +647,27 @@ SLUG_TO_MOBI_ID: Final = {
 # meritum
 # microbee
 # microtan-65
-# microvision
 # mophun
 # motorola-6800
 # motorola-68k
-# ngage2
-# nascom
-# neo-geo
 # neo-geo-x
 # newbrain
 # newton
-# nintendo-ds
 # northstar
 # noval-760
 # os2
-# odyssey
-# odyssey-2
 # ohio-scientific
-# onlive
 # orao
 # oric
 # pc-booter
 # pc-6001
 # pc-8000
-# pc88
-# pc98
-# pico
-# ps-vita
-# palmos
+# pico (not the sega pico)
 # pandora
 # pebble
 # philips-vg-5000
 # photocd
 # pippin
-# playstation-4
-# playstation-5
 # playstation-now
 # plex-arcade
 # pokitto
@@ -661,16 +678,11 @@ SLUG_TO_MOBI_ID: Final = {
 # sam-coupe
 # scmp
 # sd-200270290
-# sega-32x
-# sega-cd
-# sega-saturn
 # sk-vm
 # smc-777
 # sri-5001000
 # swtpc-6800
-# sharp-mz-80b20002500
 # sharp-mz-80k7008001500
-# sharp-x1
 # sharp-zaurus
 # signetics-2650
 # socrates
@@ -683,9 +695,7 @@ SLUG_TO_MOBI_ID: Final = {
 # symbian
 # tads
 # ti-programmable-calculator
-# ti-994a
 # tim
-# trs-80-coco
 # trs-80-mc-10
 # trs-80-model-100
 # taito-x-55
@@ -693,7 +703,6 @@ SLUG_TO_MOBI_ID: Final = {
 # tele-spiel
 # telstar-arcade
 # terminal
-# thomson-mo
 # thomson-to
 # tiki-100
 # timex-sinclair-2068
@@ -701,31 +710,21 @@ SLUG_TO_MOBI_ID: Final = {
 # tomahawk-f1
 # tomy-tutor
 # triton
-# turbografx-cd
-# turbo-grafx
 # vflash
 # vis
 # versatile
 # videobrain
 # videopac-g7400
-# virtual-boy
 # wipi
 # wang2200
-# wii-u
-# windows
 # win3x
 # windows-apps
-# windowsmobile
-# windows-phone
 # xavixport
 # xboxcloudgaming
-# xbox-one
-# xbox-series
 # xerox-alto
 # z-machine
 # zx-spectrum-next
 # zx80
-# zx81
 # z80
 # zilog-z8000
 # zodiac
@@ -733,7 +732,6 @@ SLUG_TO_MOBI_ID: Final = {
 # bada
 # digiblast
 # ipad
-# iphone
 # ipod-classic
 # iircade
 # tvos
