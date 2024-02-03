@@ -2,7 +2,7 @@ import pytest
 from urllib.parse import urlparse
 
 from config import DEFAULT_URL_COVER_L
-from handler.igdb_handler import IGDBHandler
+from backend.handler.metadata_handler.igdb_handler import IGDBHandler
 
 igdb_handler = IGDBHandler()
 
