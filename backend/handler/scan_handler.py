@@ -85,7 +85,7 @@ def scan_platform(
 
     platform = SOURCE_TO_HANDLER[source].get_platform(platform_attrs["slug"])
 
-    if platform["igdb_id"]:
+    if platform.get("igdb_id", None) or platform.get("moby_id", None):
         log.info(emoji.emojize(f"  Identified as {platform['name']} :video_game:"))
     else:
         log.warning(
@@ -157,7 +157,9 @@ async def scan_rom(
             )
             return Rom(**rom_attrs)
     elif source == MetadataSource.MOBYGAMES:
-        handler_rom = moby_handler.get_rom(rom_attrs["file_name"], platform.moby_id)
+        handler_rom = await moby_handler.get_rom(
+            rom_attrs["file_name"], platform.moby_id
+        )
         rom_attrs.update(handler_rom)
 
         # Return early if not found in MobyGames

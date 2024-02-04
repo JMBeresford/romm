@@ -4,11 +4,11 @@
 /* eslint-disable */
 
 export type SearchRomSchema = {
-    igdb_id: number;
     slug: string;
     name: string;
     summary: string;
     url_cover: string;
     url_screenshots: Array<string>;
+    igdb_id: number;
 };
 

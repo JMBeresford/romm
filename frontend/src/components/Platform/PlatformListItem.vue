@@ -19,7 +19,7 @@ defineProps<{ platform: Platform; rail: boolean }>();
         <platform-icon :key="platform.slug" :slug="platform.slug" />
         <div
           class="igdb-icon"
-          v-if="!platform.igdb_id"
+          v-if="!platform.igdb_id && !platform.moby_id"
           title="Not found in IGDB"
         >
           ⚠️

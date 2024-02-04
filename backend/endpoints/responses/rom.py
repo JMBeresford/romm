@@ -11,6 +11,7 @@ class RomSchema(BaseModel):
     id: int
     igdb_id: Optional[int]
     sgdb_id: Optional[int]
+    moby_id: Optional[int]
 
     platform_id: int
     platform_slug: str

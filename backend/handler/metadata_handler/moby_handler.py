@@ -2,7 +2,8 @@ import pydash
 import requests
 import yarl
 import re
-from config import DEFAULT_URL_COVER_L
+import time
+from config import DEFAULT_URL_COVER_L, MOBYGAMES_API_KEY
 from typing import Final
 from requests.exceptions import HTTPError, Timeout
 from logger.logger import log
@@ -36,12 +37,20 @@ class MobyGamesHandler(MetadataHandler):
         self.games_url = "https://api.mobygames.com/v1/games"
 
     def _request(self, url: str, timeout: int = 120) -> dict:
+        authorized_url = yarl.URL(url).update_query(api_key=MOBYGAMES_API_KEY)
         try:
-            res = requests.get(url, timeout=timeout)
+            res = requests.get(authorized_url, timeout=timeout)
             res.raise_for_status()
             return res.json()
+        except HTTPError as err:
+            if err.response.status_code != 429:
+                log.error(err)
+                return {}
+
+            # Retry after 2 seconds if rate limit hit
+            time.sleep(2)
         except Timeout:
-            # Retry once the request if it times out
+            # Retry the request once if it times out
             pass
 
         try:
@@ -56,12 +65,12 @@ class MobyGamesHandler(MetadataHandler):
 
     def _search_rom(self, search_term: str, platform_moby_id: int) -> dict:
         url = yarl.URL(self.games_url).with_query(
-            platform=[platform_moby_id], title=search_term
+            platform=[platform_moby_id or 0], title=search_term
         )
-        roms = self._request(str(url))
+        roms = self._request(str(url)).get("games", [])
 
         exact_matches = [
-            rom for rom in roms["games"] if rom["name"].lower() == search_term.lower()
+            rom for rom in roms if rom["title"].lower() == search_term.lower()
         ]
 
         return pydash.get(exact_matches or roms, "[0]", {})
@@ -75,8 +84,8 @@ class MobyGamesHandler(MetadataHandler):
             )
 
         return MobyGamesPlatform(
-            moby_id=platform["platform_id"],
-            name=platform["platform_name"],
+            moby_id=platform["id"],
+            name=platform["name"],
             slug=slug,
         )
 
@@ -109,8 +118,8 @@ class MobyGamesHandler(MetadataHandler):
 
         return MobyGamesRom(
             moby_id=res.get("game_id", None),
-            slug=res.get("slug", ""),
-            name=res.get("name", search_term),
+            slug=None,
+            name=res.get("title", search_term),
             summary=res.get("description", ""),
             url_cover=res.get("sample_cover.image", DEFAULT_URL_COVER_L),
             url_screenshots=[
@@ -120,13 +129,13 @@ class MobyGamesHandler(MetadataHandler):
 
     def get_rom_by_id(self, moby_id: int) -> MobyGamesRom:
         url = yarl.URL(self.games_url).with_query(id=moby_id)
-        roms = self._request(str(url))
-        rom = pydash.get(roms, "games.[0]", {})
+        roms = self._request(str(url)).get("games", [])
+        rom = pydash.get(roms, "[0]", {})
 
         return MobyGamesRom(
             moby_id=moby_id,
-            slug=rom.get("slug", ""),
-            name=rom.get("name", ""),
+            slug=None,
+            name=rom.get("title", ""),
             summary=rom.get("description", ""),
             url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
             url_screenshots=[
@@ -151,8 +160,8 @@ class MobyGamesHandler(MetadataHandler):
         return [
             MobyGamesRom(
                 moby_id=rom["game_id"],
-                slug=rom["slug"],
-                name=rom["name"],
+                slug=None,
+                name=rom["title"],
                 summary=rom.get("summary", ""),
                 url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
                 url_screenshots=[
@@ -303,7 +312,7 @@ SLUG_TO_MOBI_ID: Final = {
     "game-com": {"id": 50, "name": "Game.Com"},
     "game-dot-com": {"id": 50, "name": "Game.Com"},  # IGDB
     "gamecube": {"id": 14, "name": "GameCube"},
-    "gc": {"id": 14, "name": "GameCube"},  # IGDB
+    "ngc": {"id": 14, "name": "GameCube"},  # IGDB
     "gamestick": {"id": 155, "name": "GameStick"},
     "genesis": {"id": 16, "name": "Genesis/Mega Drive"},
     "genesis-slash-megadrive": {"id": 16, "name": "Genesis/Mega Drive"},
@@ -420,6 +429,7 @@ SLUG_TO_MOBI_ID: Final = {
     "photocd": {"id": 272, "name": "Photo CD"},
     "pippin": {"id": 112, "name": "Pippin"},
     "playstation": {"id": 6, "name": "PlayStation"},
+    "ps": {"id": 6, "name": "PlayStation"},  # IGDB
     "ps2": {"id": 7, "name": "PlayStation 2"},
     "ps3": {"id": 81, "name": "PlayStation 3"},
     "playstation-4": {"id": 141, "name": "PlayStation 4"},
@@ -559,186 +569,3 @@ SLUG_TO_MOBI_ID: Final = {
     "watchos": {"id": 180, "name": "watchOS"},
     "webos": {"id": 100, "name": "webOS"},
 }
-
-UNIQUE_TO_MOBY = [
-    "abc-80",
-    "apf",
-    "alice-3290",
-    "altair-680",
-    "altair-8800",
-    "amazon-alexa",
-    "antstream",
-    "apple-i",
-    "arcadia-2001",
-    "astral-2000",
-    "atari-vcs",
-    "atom",
-    "brew",
-    "beos",
-    "blacknut",
-    "bubble",
-    "fred-cosmac",
-    "cpm",
-    "camputers-lynx",
-    "casio-pv-1000",
-    "casio-programmable-calculator",
-    "champion-2711",
-    "clickstart",
-    "colecoadam",
-    "colour-genie",
-    "compal-80",
-    "compucolor-i",
-    "compucolor-ii",
-    "compucorp-programmable-calculator",
-    "creativision",
-    "cybervision",
-    "danger-os",
-    "dedicated-console",
-    "dedicated-handheld",
-    "didj",
-    "doja",
-    "ecd-micromind",
-    "enterprise",
-    "epoch-game-pocket-computer",
-    "exen",
-    "exelvision",
-    "mobile-custom",
-    "freebox",
-    "g-cluster",
-    "gimini",
-    "gnex",
-    "gp2x",
-    "gp2x-wiz",
-    "gp32",
-    "gvm",
-    "galaksija",
-    "game-wave",
-    "gamestick",
-    "genesis",
-    "gizmondo",
-    "gloud",
-    "glulx",
-    "hd-dvd-player",
-    "hp-programmable-calculator",
-    "heathzenith",
-    "heathkit-h11",
-    "hitachi-s1",
-    "hugo",
-    "ibm-5100",
-    "ideal-computer",
-    "intel-8008",
-    "intel-8080",
-    "intel-8086",
-    "interact-model-one",
-    "interton-video-2000",
-    "j2me",
-    "jolt",
-    "jupiter-ace",
-    "kim-1",
-    "kaios",
-    "kindle",
-    "laser200",
-    "laseractive",
-    "luna",
-    "mos-technology-6502",
-    "mre",
-    "maemo",
-    "mainframe",
-    "matsushitapanasonic-jr",
-    "mattel-aquarius",
-    "meego",
-    "memotech-mtx",
-    "meritum",
-    "microbee",
-    "microtan-65",
-    "mophun",
-    "motorola-6800",
-    "motorola-68k",
-    "neo-geo-x",
-    "newbrain",
-    "newton",
-    "northstar",
-    "noval-760",
-    "os2",
-    "ohio-scientific",
-    "orao",
-    "oric",
-    "pc-booter",
-    "pc-6001",
-    "pc-8000",
-    "pico (not the sega pico)",
-    "pandora",
-    "pebble",
-    "philips-vg-5000",
-    "photocd",
-    "pippin",
-    "playstation-now",
-    "plex-arcade",
-    "pokitto",
-    "poly-88",
-    "rca-studio-ii",
-    "research-machines-380z",
-    "roku",
-    "sam-coupe",
-    "scmp",
-    "sd-200270290",
-    "sk-vm",
-    "smc-777",
-    "sri-5001000",
-    "swtpc-6800",
-    "sharp-mz-80k7008001500",
-    "sharp-zaurus",
-    "signetics-2650",
-    "socrates",
-    "sord-m5",
-    "spectravideo",
-    "super-acan",
-    "super-vision-8000",
-    "supervision",
-    "sure-shot-hd",
-    "symbian",
-    "tads",
-    "ti-programmable-calculator",
-    "tim",
-    "trs-80-mc-10",
-    "trs-80-model-100",
-    "taito-x-55",
-    "tektronix-4050",
-    "tele-spiel",
-    "telstar-arcade",
-    "terminal",
-    "thomson-to",
-    "tiki-100",
-    "timex-sinclair-2068",
-    "tizen",
-    "tomahawk-f1",
-    "tomy-tutor",
-    "triton",
-    "vflash",
-    "vis",
-    "versatile",
-    "videobrain",
-    "videopac-g7400",
-    "wipi",
-    "wang2200",
-    "win3x",
-    "windows-apps",
-    "xavixport",
-    "xboxcloudgaming",
-    "xerox-alto",
-    "z-machine",
-    "zx-spectrum-next",
-    "zx80",
-    "z80",
-    "zilog-z8000",
-    "zodiac",
-    "zune",
-    "bada",
-    "digiblast",
-    "ipad",
-    "ipod-classic",
-    "iircade",
-    "tvos",
-    "watchos",
-    "webos",
-]

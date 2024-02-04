@@ -72,6 +72,21 @@ const downloadStore = storeDownload();
       </v-chip>
     </v-col>
   </v-row>
+  <v-row v-if="rom.moby_id" class="align-center py-2" no-gutters>
+    <v-col cols="3" sm="2" xl="1">
+      <span>MobyGames</span>
+    </v-col>
+    <v-col>
+      <v-chip
+        variant="outlined"
+        class="text-romm-accent-1"
+        :href="`https://www.mobygames.com/game/${rom.moby_id}`"
+        label
+      >
+        {{ rom.moby_id }}
+      </v-chip>
+    </v-col>
+  </v-row>
   <v-row v-if="rom.tags.length > 0" class="align-center py-2" no-gutters>
     <v-col cols="3" sm="2" xl="1">
       <span>Tags</span>
@@ -86,7 +101,7 @@ const downloadStore = storeDownload();
   </v-row>
   <v-row class="py-3" no-gutters>
     <v-col class="text-caption">
-      <p>{{ rom.summary }}</p>
+      <div v-html="rom.summary"></div>
     </v-col>
   </v-row>
 </template>
