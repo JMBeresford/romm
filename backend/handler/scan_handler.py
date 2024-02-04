@@ -2,6 +2,7 @@ import os
 from typing import Any
 
 import emoji
+from config import DEFAULT_URL_COVER_L
 from config.config_manager import config_manager as cm
 from handler import (
     db_platform_handler,
@@ -71,16 +72,16 @@ def scan_platform(fs_slug: str, fs_platforms: list[str]) -> Platform:
 
     igdb_platform = igdb_handler.get_platform(platform_attrs["slug"])
     moby_platform = moby_handler.get_platform(platform_attrs["slug"])
-    platform = {**moby_platform, **igdb_platform}  # Reversed to prioritize IGDB
 
-    if platform.get("igdb_id", None) or platform.get("moby_id", None):
-        log.info(emoji.emojize(f"  Identified as {platform['name']} :video_game:"))
+    platform_attrs["name"] = platform_attrs["slug"].replace("-", " ").title()
+    platform_attrs.update({**moby_platform, **igdb_platform})  # Rev
+
+    if igdb_platform["igdb_id"] or moby_platform["moby_id"]:
+        log.info(emoji.emojize(f"  Identified as {platform_attrs['name']} :video_game:"))
     else:
         log.warning(
             emoji.emojize(f"  {platform_attrs['slug']} not found :cross_mark:")
         )
-
-    platform_attrs.update(platform)
 
     return Platform(**platform_attrs)
 
@@ -104,6 +105,13 @@ async def scan_rom(platform: Platform, rom_attrs: dict) -> Rom:
     regs, rev, langs, other_tags = fs_rom_handler.parse_tags(rom_attrs["file_name"])
     rom_attrs.update(
         {
+            "igdb_id": None,
+            "moby_id": None,
+            "slug": "",
+            "name": rom_attrs["file_name"],
+            "summary": "",
+            "url_cover": DEFAULT_URL_COVER_L,
+            "url_screenshots": [],
             "platform_id": platform.id,
             "file_path": roms_path,
             "file_name": rom_attrs["file_name"],
@@ -133,11 +141,11 @@ async def scan_rom(platform: Platform, rom_attrs: dict) -> Rom:
         rom_attrs["file_name"], platform.moby_id
     )
 
-    # Return early if not found in MobyGames
+    # Return early if not found in IGDB or MobyGames
     if not igdb_handler_rom["igdb_id"] and not moby_handler_rom["moby_id"]:
         log.warning(
             emoji.emojize(
-                f"\t   {rom_attrs['file_name']} not found in MobyGames :cross_mark:"
+                f"\t   {rom_attrs['file_name']} not found :cross_mark:"
             )
         )
         return Rom(**rom_attrs)

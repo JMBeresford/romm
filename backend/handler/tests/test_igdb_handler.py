@@ -55,8 +55,8 @@ async def test_get_ps2_opl_rom():
     assert urlparse(rom["url_screenshots"][0]).hostname == "images.igdb.com"
 
 @pytest.mark.vcr()
-def test_get_rom_by_id():
-    rom = igdb_handler.get_rom_by_id(3340)
+def test__get_rom_by_id():
+    rom = igdb_handler._get_rom_by_id(3340)
     assert rom["igdb_id"] == 3340
     assert rom["slug"] == "paper-mario"
     assert rom["name"] == "Paper Mario"
@@ -64,7 +64,7 @@ def test_get_rom_by_id():
     assert urlparse(rom["url_cover"]).hostname == "images.igdb.com"
     assert urlparse(rom["url_screenshots"][0]).hostname == "images.igdb.com"
 
-    rom = igdb_handler.get_rom_by_id(-1)
+    rom = igdb_handler._get_rom_by_id(-1)
     assert rom["igdb_id"] == -1
     assert not rom["name"]
 

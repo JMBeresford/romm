@@ -57,7 +57,8 @@ async function updateRom(matchedRom: SearchRomSchema) {
   show.value = false;
   emitter?.emit("showLoadingDialog", { loading: true, scrim: true });
 
-  rom.value.igdb_id = matchedRom.igdb_id;
+  if (matchedRom.igdb_id) rom.value.igdb_id = matchedRom.igdb_id;
+  if (matchedRom.moby_id) rom.value.moby_id = matchedRom.moby_id;
   rom.value.name = matchedRom.name;
   rom.value.slug = matchedRom.slug;
   rom.value.summary = matchedRom.summary;

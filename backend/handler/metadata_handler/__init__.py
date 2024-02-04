@@ -3,7 +3,6 @@ import xmltodict
 import os
 import re
 from typing import Final
-from typing_extensions import TypedDict
 from logger.logger import log
 from tasks.update_mame_xml import update_mame_xml_task
 from tasks.update_switch_titledb import update_switch_titledb_task
@@ -26,17 +25,6 @@ SWITCH_PRODUCT_ID_FILE: Final = os.path.join(
 
 MAME_XML_FILE: Final = os.path.join(os.path.dirname(__file__), "fixtures", "mame.xml")
 
-
-class MetadataRom(TypedDict):
-    slug: str
-    name: str
-    summary: str
-    url_cover: str
-    url_screenshots: list[str]
-
-class MetadataPlatform(TypedDict):
-    slug: str
-    name: str
 
 class MetadataHandler:
     @staticmethod

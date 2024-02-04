@@ -4,6 +4,7 @@ from endpoints.responses.search import SearchRomSchema
 from fastapi import APIRouter, Request
 from handler import db_rom_handler, igdb_handler, moby_handler
 from logger.logger import log
+from config import DEFAULT_URL_COVER_L
 
 router = APIRouter()
 
@@ -50,11 +51,26 @@ async def search_rom(
             search_term, rom.platform.moby_id
         )
 
+    merged_dict = {item["name"]: item for item in igdb_matched_roms}
+    for item in moby_matched_roms:
+        merged_dict[item["name"]] = {**item, **merged_dict.get(item["name"], {})}
+
+    matched_roms = [
+        {
+            **{
+                "slug": "",
+                "name": "",
+                "summary": "",
+                "url_cover": DEFAULT_URL_COVER_L,
+                "url_screenshots": [],
+            },
+            **item,
+        }
+        for item in list(merged_dict.values())
+    ]
+
     log.info("Results:")
-    results = []
-    matched_roms = igdb_matched_roms + moby_matched_roms
     for m_rom in matched_roms:
         log.info(f"\t - {m_rom['name']}")
-        results.append(m_rom)
 
-    return results
+    return matched_roms

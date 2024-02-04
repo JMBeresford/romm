@@ -3,15 +3,13 @@ import requests
 import yarl
 import re
 import time
-from config import DEFAULT_URL_COVER_L, MOBYGAMES_API_KEY
-from typing import Final
+from config import MOBYGAMES_API_KEY
+from typing import Final, TypedDict, NotRequired
 from requests.exceptions import HTTPError, Timeout
 from logger.logger import log
 from unidecode import unidecode as uc
 
 from . import (
-    MetadataPlatform,
-    MetadataRom,
     MetadataHandler,
     PS2_OPL_REGEX,
     SWITCH_TITLEDB_REGEX,
@@ -20,15 +18,21 @@ from . import (
 
 PS2_MOBY_ID: Final = 7
 SWITCH_MOBY_ID: Final = 203
-ARCADE_MOBY_IDS: Final = [143]
+ARCADE_MOBY_IDS: Final = [143, 36]
 
 
-class MobyGamesRom(MetadataRom):
+class MobyGamesRom(TypedDict):
+    moby_id: int | None
+    name: NotRequired[str]
+    summary: NotRequired[str]
+    url_cover: NotRequired[str]
+    url_screenshots: NotRequired[list[str]]
+
+
+class MobyGamesPlatform(TypedDict):
     moby_id: int
-
-
-class MobyGamesPlatform(MetadataPlatform):
-    moby_id: int
+    slug: str
+    name: NotRequired[str]
 
 
 class MobyGamesHandler(MetadataHandler):
@@ -63,7 +67,7 @@ class MobyGamesHandler(MetadataHandler):
 
         return res.json()
 
-    def _search_rom(self, search_term: str, platform_moby_id: int) -> dict:
+    def _search_rom(self, search_term: str, platform_moby_id: int) -> dict | None:
         url = yarl.URL(self.games_url).with_query(
             platform=[platform_moby_id or 0], title=search_term
         )
@@ -73,20 +77,18 @@ class MobyGamesHandler(MetadataHandler):
             rom for rom in roms if rom["title"].lower() == search_term.lower()
         ]
 
-        return pydash.get(exact_matches or roms, "[0]", {})
+        return pydash.get(exact_matches or roms, "[0]", None)
 
     def get_platform(self, slug: str) -> MobyGamesPlatform:
         platform = SLUG_TO_MOBI_ID.get(slug, None)
 
         if not platform:
-            return MobyGamesPlatform(
-                igdb_id=None, slug=slug, name=slug.replace("-", " ").title()
-            )
+            return MobyGamesPlatform(moby_id=None, slug=slug)
 
         return MobyGamesPlatform(
             moby_id=platform["id"],
-            name=platform["name"],
             slug=slug,
+            name=platform["name"],
         )
 
     async def get_rom(self, file_name: str, platform_moby_id: int) -> MobyGamesRom:
@@ -116,35 +118,39 @@ class MobyGamesHandler(MetadataHandler):
         search_term = self.normalize_search_term(search_term)
         res = self._search_rom(uc(search_term), platform_moby_id)
 
-        return MobyGamesRom(
-            moby_id=res.get("game_id", None),
-            slug=None,
-            name=res.get("title", search_term),
-            summary=res.get("description", ""),
-            url_cover=res.get("sample_cover.image", DEFAULT_URL_COVER_L),
-            url_screenshots=[
-                s.get("image", None) for s in res.get("sample_screenshots", [])
-            ],
-        )
+        if not res:
+            return MobyGamesRom(moby_id=None)
 
-    def get_rom_by_id(self, moby_id: int) -> MobyGamesRom:
+        rom = {
+            "moby_id": res["game_id"],
+            "name": res["title"],
+            "summary": res.get("description", ""),
+            "url_cover": res.get("sample_cover.image", ""),
+            "url_screenshots": [s["image"] for s in res.get("sample_screenshots", [])],
+        }
+
+        return MobyGamesRom({k: v for k, v in rom.items() if v})
+
+    def _get_rom_by_id(self, moby_id: int) -> MobyGamesRom:
         url = yarl.URL(self.games_url).with_query(id=moby_id)
         roms = self._request(str(url)).get("games", [])
-        rom = pydash.get(roms, "[0]", {})
+        res = pydash.get(roms, "[0]", None)
 
-        return MobyGamesRom(
-            moby_id=moby_id,
-            slug=None,
-            name=rom.get("title", ""),
-            summary=rom.get("description", ""),
-            url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
-            url_screenshots=[
-                s.get("image", None) for s in rom.get("sample_screenshots", [])
-            ],
-        )
+        if not res:
+            return MobyGamesRom(moby_id=moby_id)
+
+        rom = {
+            "moby_id": res["game_id"],
+            "name": res["title"],
+            "summary": res.get("description", None),
+            "url_cover": res.get("sample_cover.image", None),
+            "url_screenshots": [s["image"] for s in res.get("sample_screenshots", [])],
+        }
+
+        return MobyGamesRom({k: v for k, v in rom.items() if v})
 
     def get_matched_roms_by_id(self, moby_id: int) -> list[MobyGamesRom]:
-        return self.get_rom_by_id(moby_id)
+        return [self.get_rom_by_id(moby_id)]
 
     def get_matched_roms_by_name(
         self, search_term: str, platform_moby_id: int
@@ -153,20 +159,25 @@ class MobyGamesHandler(MetadataHandler):
             return []
 
         url = yarl.URL(self.games_url).with_query(
-            platform=[platform_moby_id], title=search_term
+            platform=[platform_moby_id or 0], title=search_term
         )
-        matched_roms = self._request(str(url))
+        matched_roms = self._request(str(url))["games"]
 
         return [
             MobyGamesRom(
-                moby_id=rom["game_id"],
-                slug=None,
-                name=rom["title"],
-                summary=rom.get("summary", ""),
-                url_cover=rom.get("sample_cover.image", DEFAULT_URL_COVER_L),
-                url_screenshots=[
-                    s.get("image", None) for s in rom.get("sample_screenshots", [])
-                ],
+                {
+                    k: v
+                    for k, v in {
+                        "moby_id": rom["game_id"],
+                        "name": rom["title"],
+                        "summary": rom.get("description", ""),
+                        "url_cover": rom.get("sample_cover.image", ""),
+                        "url_screenshots": [
+                            s["image"] for s in rom.get("sample_screenshots", [])
+                        ],
+                    }.items()
+                    if v
+                }
             )
             for rom in matched_roms
         ]
