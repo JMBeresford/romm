@@ -82,19 +82,16 @@ function clearRomFromDownloads({ id }: { id: number }) {
 
 async function searchRom({
   romId,
-  source,
   searchTerm,
   searchBy,
 }: {
   romId: number;
-  source: "igdb" | "mobygames";
   searchTerm: string;
   searchBy: string;
 }): Promise<{ data: SearchRomSchema[] }> {
   return api.get("/search/roms", {
     params: {
       rom_id: romId,
-      source: source,
       search_term: searchTerm,
       search_by: searchBy,
     },

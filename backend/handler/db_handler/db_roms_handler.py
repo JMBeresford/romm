@@ -1,13 +1,13 @@
 from decorators.database import begin_session
 from handler.db_handler import DBHandler
 from models.rom import Rom
-from sqlalchemy import and_, delete, func, select, update, or_
+from sqlalchemy import and_, delete, func, select, update, or_, Select
 from sqlalchemy.orm import Session
 
 
 class DBRomsHandler(DBHandler):
     @staticmethod
-    def _filter(data, platform_id, search_term):
+    def _filter(data: Select[Rom], platform_id: int | None, search_term: str):
         if platform_id:
             data = data.filter_by(platform_id=platform_id)
 
@@ -22,7 +22,7 @@ class DBRomsHandler(DBHandler):
         return data
 
     @staticmethod
-    def _order(data, order_by, order_dir):
+    def _order(data: Select[Rom], order_by: str, order_dir: str):
         if order_by == "id":
             _column = Rom.id
         else:
@@ -47,7 +47,6 @@ class DBRomsHandler(DBHandler):
         order_dir: str = "asc",
         session: Session = None,
     ):
-        select(Rom).filter()
         return (
             session.get(Rom, id)
             if id

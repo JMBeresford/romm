@@ -36,7 +36,6 @@ async function searchRom() {
     await romApi
       .searchRom({
         romId: rom.value.id,
-        source: "igdb",
         searchTerm: searchTerm.value,
         searchBy: searchBy.value,
       })

@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
           • Identified <b>{{ rom.name }} 👾</b>
         </span>
         <span v-else class="ml-10">
-          • {{ rom.file_name }} not found in IGDB ❌
+          • {{ rom.file_name }} not found ❌
         </span>
       </v-list-item>
     </v-col>

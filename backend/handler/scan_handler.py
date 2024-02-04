@@ -1,6 +1,5 @@
 import os
 from typing import Any
-from enum import Enum
 
 import emoji
 from config.config_manager import config_manager as cm
@@ -18,16 +17,7 @@ from models.platform import Platform
 from models.rom import Rom
 
 
-class MetadataSource(Enum):
-    IGDB = "igdb"
-    MOBYGAMES = "mobygames"
-
-
 SWAPPED_PLATFORM_BINDINGS = dict((v, k) for k, v in cm.config.PLATFORMS_BINDING.items())
-SOURCE_TO_HANDLER = {
-    MetadataSource.IGDB: igdb_handler,
-    MetadataSource.MOBYGAMES: moby_handler,
-}
 
 
 def _get_main_platform_igdb_id(platform: Platform):
@@ -47,11 +37,7 @@ def _get_main_platform_igdb_id(platform: Platform):
     return main_platform_igdb_id
 
 
-def scan_platform(
-    fs_slug: str,
-    fs_platforms: list[str],
-    source: MetadataSource = MetadataSource.MOBYGAMES,
-) -> Platform:
+def scan_platform(fs_slug: str, fs_platforms: list[str]) -> Platform:
     """Get platform details
 
     Args:
@@ -83,13 +69,15 @@ def scan_platform(
     except (KeyError, TypeError, AttributeError):
         platform_attrs["slug"] = fs_slug
 
-    platform = SOURCE_TO_HANDLER[source].get_platform(platform_attrs["slug"])
+    igdb_platform = igdb_handler.get_platform(platform_attrs["slug"])
+    moby_platform = moby_handler.get_platform(platform_attrs["slug"])
+    platform = {**moby_platform, **igdb_platform}  # Reversed to prioritize IGDB
 
     if platform.get("igdb_id", None) or platform.get("moby_id", None):
         log.info(emoji.emojize(f"  Identified as {platform['name']} :video_game:"))
     else:
         log.warning(
-            emoji.emojize(f"  {platform_attrs['slug']} not found in IGDB :cross_mark:")
+            emoji.emojize(f"  {platform_attrs['slug']} not found :cross_mark:")
         )
 
     platform_attrs.update(platform)
@@ -97,11 +85,7 @@ def scan_platform(
     return Platform(**platform_attrs)
 
 
-async def scan_rom(
-    platform: Platform,
-    rom_attrs: dict,
-    source: MetadataSource = MetadataSource.MOBYGAMES,
-) -> Rom:
+async def scan_rom(platform: Platform, rom_attrs: dict) -> Rom:
     roms_path = fs_rom_handler.get_fs_structure(platform.fs_slug)
 
     log.info(f"\t · {rom_attrs['file_name']}")
@@ -141,37 +125,25 @@ async def scan_rom(
         }
     )
 
-    if source == MetadataSource.IGDB:
-        main_platform_igdb_id = _get_main_platform_igdb_id(platform)
-        handler_rom = await igdb_handler.get_rom(
-            rom_attrs["file_name"], main_platform_igdb_id
-        )
-        rom_attrs.update(handler_rom)
+    main_platform_igdb_id = _get_main_platform_igdb_id(platform)
+    igdb_handler_rom = await igdb_handler.get_rom(
+        rom_attrs["file_name"], main_platform_igdb_id
+    )
+    moby_handler_rom = await moby_handler.get_rom(
+        rom_attrs["file_name"], platform.moby_id
+    )
 
-        # Return early if not found in IGDB
-        if not handler_rom["igdb_id"]:
-            log.warning(
-                emoji.emojize(
-                    f"\t   {rom_attrs['file_name']} not found in IGDB :cross_mark:"
-                )
+    # Return early if not found in MobyGames
+    if not igdb_handler_rom["igdb_id"] and not moby_handler_rom["moby_id"]:
+        log.warning(
+            emoji.emojize(
+                f"\t   {rom_attrs['file_name']} not found in MobyGames :cross_mark:"
             )
-            return Rom(**rom_attrs)
-    elif source == MetadataSource.MOBYGAMES:
-        handler_rom = await moby_handler.get_rom(
-            rom_attrs["file_name"], platform.moby_id
         )
-        rom_attrs.update(handler_rom)
-
-        # Return early if not found in MobyGames
-        if not handler_rom["moby_id"]:
-            log.warning(
-                emoji.emojize(
-                    f"\t   {rom_attrs['file_name']} not found in MobyGames :cross_mark:"
-                )
-            )
-            return Rom(**rom_attrs)
-
-    log.info(emoji.emojize(f"\t   Identified as {handler_rom['name']} :alien_monster:"))
+        return Rom(**rom_attrs)
+    
+    rom_attrs.update({**moby_handler_rom, **igdb_handler_rom}) # Reversed to prioritize IGDB
+    log.info(emoji.emojize(f"\t   Identified as {rom_attrs['name']} :alien_monster:"))
 
     # Update properties from IGDB
     rom_attrs.update(
